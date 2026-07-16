@@ -10,14 +10,12 @@ app.config.from_object(Config)
 
 db.init_app(app)
 
-# Регистрируем Blueprint'ы
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(docs_bp)
 
 @app.route('/')
 def hello():
-    # Перенаправим на главную, если вошёл, иначе на логин
     from auth import get_current_user
     user = get_current_user()
     if user:
@@ -40,12 +38,42 @@ with app.app_context():
         db.session.add(uktp)
         db.session.flush()
         fields_data = [
+            # Зона 1
             ('Наименование продукта', 'string', True, 1),
             ('Применение', 'text', True, 2),
-            # ... (можешь добавить остальные поля из спецификации, я сократил для примера)
+            ('Источник идеи', 'string', False, 3),
+            ('Инициатор (ФИО)', 'string', True, 4),
+            ('Контакты инициатора', 'string', False, 5),
+            ('Дата регистрации идеи', 'date', False, 6),
+            ('Геометрические характеристики', 'text', False, 7),
+            ('Технические характеристики', 'text', False, 8),
+            ('Требования к упаковке', 'text', False, 9),
+            ('Требования к маркировке', 'text', False, 10),
+            ('Объём первой партии', 'number', False, 11),
+            ('Ежемесячный объём', 'number', False, 12),
+            ('Конкуренты', 'text', False, 13),
+            ('Предполагаемая цена продажи', 'number', False, 14),
+            ('Целевая маржинальность (%)', 'number', False, 15),
+            ('Решение СД №1 (одобрено/доработка/отказ)', 'string', False, 16),
+            # Зона 2
+            ('Экспресс-тест: заключение', 'text', False, 17),
+            # Зона 3
+            ('Юридические препятствия', 'text', False, 18),
+            # Зона 4
+            ('Объём пилотной партии', 'number', False, 19),
+            # Зона 5
+            ('Дата ввода в ассортимент', 'date', False, 20),
+            # Зона 6
+            ('Статус завершения', 'string', False, 21),
         ]
         for fname, ftype, req, order in fields_data:
-            db.session.add(Field(document_type_id=uktp.id, field_name=fname, field_type=ftype, is_required=req, order=order))
+            db.session.add(Field(
+                document_type_id=uktp.id,
+                field_name=fname,
+                field_type=ftype,
+                is_required=req,
+                order=order
+            ))
         db.session.commit()
 
 if __name__ == '__main__':
