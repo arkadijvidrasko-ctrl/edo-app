@@ -1,9 +1,10 @@
 from flask import Flask, redirect, url_for
 from config import Config
-from models import db, DocumentType, Field
+from models import db, DocumentType, Field, User
 from auth import auth_bp
 from routes_admin import admin_bp
 from routes_documents import docs_bp
+from routes_approval import approval_bp
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -13,6 +14,7 @@ db.init_app(app)
 app.register_blueprint(auth_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(docs_bp)
+app.register_blueprint(approval_bp)
 
 @app.route('/')
 def hello():
@@ -25,20 +27,31 @@ def hello():
         if user.role == 'admin':
             html += '<li><a href="/admin/document_types">Управление видами документов (админ)</a></li>'
         html += '<li><a href="/documents">Мои документы</a></li>'
+        if user.role == 'approver':
+            html += '<li><a href="/approval">На согласование</a></li>'
         html += '</ul><p><a href="/logout">Выйти</a></p>'
         return html
     else:
         return redirect(url_for('auth.login'))
 
-# Создание таблиц и начальных данных
 with app.app_context():
     db.create_all()
+
+    # Создаём тестовых пользователей, если их нет
+    if not User.query.filter_by(username='admin').first():
+        admin = User(username='admin', email='admin@example.com', role='admin')
+        db.session.add(admin)
+    if not User.query.filter_by(username='approver').first():
+        approver = User(username='approver', email='approver@example.com', role='approver')
+        db.session.add(approver)
+    db.session.commit()
+
+    # Создаём УКТП
     if not DocumentType.query.filter_by(name='УКТП').first():
         uktp = DocumentType(name='УКТП', description='Универсальная карточка товара и поставщика')
         db.session.add(uktp)
         db.session.flush()
         fields_data = [
-            # Зона 1
             ('Наименование продукта', 'string', True, 1),
             ('Применение', 'text', True, 2),
             ('Источник идеи', 'string', False, 3),
@@ -55,15 +68,10 @@ with app.app_context():
             ('Предполагаемая цена продажи', 'number', False, 14),
             ('Целевая маржинальность (%)', 'number', False, 15),
             ('Решение СД №1 (одобрено/доработка/отказ)', 'string', False, 16),
-            # Зона 2
             ('Экспресс-тест: заключение', 'text', False, 17),
-            # Зона 3
             ('Юридические препятствия', 'text', False, 18),
-            # Зона 4
             ('Объём пилотной партии', 'number', False, 19),
-            # Зона 5
             ('Дата ввода в ассортимент', 'date', False, 20),
-            # Зона 6
             ('Статус завершения', 'string', False, 21),
         ]
         for fname, ftype, req, order in fields_data:
