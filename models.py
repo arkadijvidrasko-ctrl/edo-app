@@ -27,18 +27,30 @@ class DocumentInstance(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     document_type_id = db.Column(db.Integer, db.ForeignKey('document_type.id'), nullable=False)
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status = db.Column(db.String(20), default='draft')
+    status = db.Column(db.String(20), default='draft')  # draft, pending_approval, approved, rejected
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     document_type = db.relationship('DocumentType', backref='instances')
     creator = db.relationship('User', backref='documents')
     field_values = db.relationship('DocumentFieldValue', backref='document', lazy=True, cascade="all, delete-orphan")
+    approval_steps = db.relationship('ApprovalStep', backref='document', lazy=True, cascade="all, delete-orphan")
 
 class DocumentFieldValue(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     document_id = db.Column(db.Integer, db.ForeignKey('document_instance.id'), nullable=False)
     field_id = db.Column(db.Integer, db.ForeignKey('field.id'), nullable=False)
     value = db.Column(db.Text, default='')
-
     field = db.relationship('Field')
+
+class ApprovalStep(db.Model):
+    """Шаг согласования: решение конкретного подписанта по документу"""
+    id = db.Column(db.Integer, primary_key=True)
+    document_id = db.Column(db.Integer, db.ForeignKey('document_instance.id'), nullable=False)
+    approver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    decision = db.Column(db.String(20), nullable=True)  # None - ещё не решено, 'approved', 'rejected'
+    comment = db.Column(db.Text, default='')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    decided_at = db.Column(db.DateTime, nullable=True)
+
+    approver = db.relationship('User')
